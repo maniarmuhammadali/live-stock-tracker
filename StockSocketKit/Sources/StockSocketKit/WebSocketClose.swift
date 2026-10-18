@@ -27,6 +27,7 @@ struct WebSocketClose: Error, Sendable, Equatable {
     }
 }
 
+/// URLSession delegates serialize callbacks, but the connection actor can read concurrently.
 final class WebSocketCloseState: Sendable {
     private let value = Mutex<WebSocketClose?>(nil)
 

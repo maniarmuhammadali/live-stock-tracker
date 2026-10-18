@@ -17,6 +17,9 @@ public enum WebSocketPublicEvent: Equatable, Sendable {
 }
 
 public enum WebSocketTransportFailure: Equatable, Sendable {
+    case heartbeatTimedOut
+    case sendTimedOut
+    case staleData
     case closedByServer(code: Int)
     case handshakeFailed
     case closedUnexpectedly

@@ -30,12 +30,16 @@ struct LiveStockTrackerApp: App {
         Task {
             let events = await session.wireEventsStream()
             await session.start()
-
+            var snapshots = 0
             for await event in events {
                 switch event {
                 case let .decodedBatch(batch):
                     let sample = batch.prefix(3).map { "\($0.symbol) \(String(format: "%.2f", $0.price))" }
                     print("[socket] snapshot of \(batch.count): \(sample.joined(separator: ", ")) ...")
+                    snapshots += 1
+                    if snapshots.isMultiple(of: 10) { print("[socket] diagnostics \(await session.diagnostics())") }
+                case let .reconnectScheduled(attempt):
+                    print("[socket] reconnect scheduled, attempt \(attempt)")
                 default:
                     print("[socket] \(event)")
                 }

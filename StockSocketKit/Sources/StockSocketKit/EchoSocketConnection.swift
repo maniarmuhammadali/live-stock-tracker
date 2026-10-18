@@ -12,6 +12,7 @@ protocol EchoSocketConnection: Sendable {
     func open() async throws
     func receive() async throws -> URLSessionWebSocketTask.Message
     func send(_ message: URLSessionWebSocketTask.Message) async throws
+    func ping() async throws
     func close(code: URLSessionWebSocketTask.CloseCode, reason: Data?) async
 }
 
@@ -23,6 +24,7 @@ actor URLSessionEchoSocketConnection: EchoSocketConnection {
     private var task: URLSessionWebSocketTask?
     private let handshake = WebSocketHandshakeAwaiter()
     private let closeState = WebSocketCloseState()
+    private var pendingPings: [UUID: WebSocketHandshakeAwaiter] = [:]
     private var closed = false
 
     init(url: URL, tlsHooks: EchoTLSHooks, timeout: UInt64) {
@@ -63,6 +65,24 @@ actor URLSessionEchoSocketConnection: EchoSocketConnection {
         }
     }
 
+    func ping() async throws {
+        guard let task, !closed else { throw CancellationError() }
+        let id = UUID()
+        let waiter = WebSocketHandshakeAwaiter()
+        pendingPings[id] = waiter
+        defer { pendingPings.removeValue(forKey: id) }
+        task.sendPing { error in
+            if let error { waiter.completeFailure(error) } else { waiter.completeSuccess() }
+        }
+        do {
+            try await waiter.waitHandshakeResult().get()
+            try Task.checkCancellation()
+        } catch {
+            if let close = peerClosure() { throw close }
+            throw error
+        }
+    }
+
     private func peerClosure() -> WebSocketClose? {
         if let close = closeState.snapshot() { return close }
         guard let task, !closed, task.closeCode != .invalid else { return nil }
@@ -73,6 +93,8 @@ actor URLSessionEchoSocketConnection: EchoSocketConnection {
         guard !closed else { return }
         closed = true
         handshake.completeFailure(CancellationError())
+        for waiter in pendingPings.values { waiter.completeFailure(CancellationError()) }
+        pendingPings.removeAll()
         task?.cancel(with: code, reason: reason)
         session?.finishTasksAndInvalidate()
         task = nil

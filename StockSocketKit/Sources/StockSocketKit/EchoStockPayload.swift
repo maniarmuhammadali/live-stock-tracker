@@ -2,7 +2,7 @@
 //  EchoStockPayload.swift
 //  StockSocketKit
 //
-//  Created by Muhammad Ali Maniar on 18/10/2026.
+//  Created by Muhammad Ali Maniar on 01/05/2026.
 //
 
 import Foundation

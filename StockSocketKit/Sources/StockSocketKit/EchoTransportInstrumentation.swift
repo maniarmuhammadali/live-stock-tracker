@@ -29,13 +29,29 @@ public struct EchoTransportMetrics: Sendable {
 
     public var onTerminalTransportFailure: (@Sendable (WebSocketTransportFailure) -> Void)?
 
+    public var onFrameDropped: (@Sendable () -> Void)?
+
+    public var onEventDropped: (@Sendable (WebSocketPublicEvent) -> Void)?
+
+    public var onStaleData: (@Sendable () -> Void)?
+
+    public var onTimeToFirstTick: (@Sendable (_ milliseconds: Int) -> Void)?
+
     public init(
         onReconnectSleep: (@Sendable (Int, UInt64) -> Void)? = nil,
         onHandshakeCompleted: (@Sendable (Bool) -> Void)? = nil,
-        onTerminalTransportFailure: (@Sendable (WebSocketTransportFailure) -> Void)? = nil
+        onTerminalTransportFailure: (@Sendable (WebSocketTransportFailure) -> Void)? = nil,
+        onFrameDropped: (@Sendable () -> Void)? = nil,
+        onEventDropped: (@Sendable (WebSocketPublicEvent) -> Void)? = nil,
+        onStaleData: (@Sendable () -> Void)? = nil,
+        onTimeToFirstTick: (@Sendable (Int) -> Void)? = nil
     ) {
         self.onReconnectSleep = onReconnectSleep
         self.onHandshakeCompleted = onHandshakeCompleted
         self.onTerminalTransportFailure = onTerminalTransportFailure
+        self.onFrameDropped = onFrameDropped
+        self.onEventDropped = onEventDropped
+        self.onStaleData = onStaleData
+        self.onTimeToFirstTick = onTimeToFirstTick
     }
 }
