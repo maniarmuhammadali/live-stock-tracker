@@ -1,0 +1,24 @@
+disabled_rules:
+  - trailing_comma
+opt_in_rules:
+  - explicit_init
+  - overridden_super_call
+line_length:
+  warning: 140
+  error: 180
+identifier_name:
+  min_length:
+    warning: 2
+type_body_length:
+  warning: 400
+  error: 600
+function_body_length:
+  warning: 80
+  error: 120
+file_length:
+  warning: 500
+  error: 800
+excluded:
+  - .build
+  - "**/.build"
+  - StockSocketKit/.build
