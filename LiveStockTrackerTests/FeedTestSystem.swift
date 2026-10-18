@@ -6,6 +6,7 @@
 //
 
 import StockSocketKit
+import SwiftData
 @testable import LiveStockTracker
 
 @MainActor
@@ -22,10 +23,11 @@ final class FeedTestSystem: StockRepositoryProtocol {
     var isPersistenceDegraded: Bool { repository.isPersistenceDegraded }
     var staleTicksDropped: Int { repository.staleTicksDropped }
 
-    init(catalogEntries: [StockCatalogEntry], logging: Logging,
+    init(store: any QuoteStoring, catalogEntries: [StockCatalogEntry], logging: Logging,
          echoFeedBuilder: @escaping ([String]) async -> any StockEchoFeed,
+         sleep: @escaping @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
          pathUpdates: @escaping @Sendable () -> AsyncStream<FeedNetworkPath> = { AsyncStream { $0.finish() } }) {
-        repository = DefaultStockRepository(catalogEntries: catalogEntries, logging: logging)
+        repository = DefaultStockRepository(store: store, catalogEntries: catalogEntries, logging: logging, sleep: sleep)
         let coordinator = FeedSessionCoordinator(repository: repository, feedBuilder: { symbols in
             EchoPriceFeed(transport: await echoFeedBuilder(symbols), logging: logging)
         })
@@ -38,9 +40,19 @@ final class FeedTestSystem: StockRepositoryProtocol {
         networkObserver = FeedNetworkObserver(updates: pathUpdates)
     }
 
+    convenience init(modelContainer: ModelContainer, catalogEntries: [StockCatalogEntry], logging: Logging,
+                     echoFeedBuilder: @escaping ([String]) async -> any StockEchoFeed,
+                     sleep: @escaping @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
+        self.init(store: SwiftDataQuoteStore(modelContainer: modelContainer), catalogEntries: catalogEntries,
+                  logging: logging, echoFeedBuilder: echoFeedBuilder, sleep: sleep)
+    }
+
     convenience init(pathUpdates: @escaping @Sendable () -> AsyncStream<FeedNetworkPath> = { AsyncStream { $0.finish() } },
                      builder: @escaping ([String]) async -> any StockEchoFeed) throws {
-        self.init(catalogEntries: [StockCatalogEntry(symbol: "AAPL", companyName: "Apple", descriptionText: "D")],
+        let container = try ModelContainer(for: PersistedQuote.self,
+                                          configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        self.init(store: SwiftDataQuoteStore(modelContainer: container),
+                  catalogEntries: [StockCatalogEntry(symbol: "AAPL", companyName: "Apple", descriptionText: "D")],
                   logging: LifecycleLogging(), echoFeedBuilder: builder, pathUpdates: pathUpdates)
     }
 

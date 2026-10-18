@@ -6,6 +6,7 @@
 //
 
 import StockSocketKit
+import SwiftData
 import XCTest
 @testable import LiveStockTracker
 
@@ -28,7 +29,10 @@ private final class MountGate {
 @MainActor
 final class FeedLifecycleTests: XCTestCase {
     private func makeSystem(builder: @escaping ([String]) async -> any StockEchoFeed) throws -> FeedTestSystem {
-        FeedTestSystem(
+        let container = try ModelContainer(for: PersistedQuote.self,
+                                          configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        return FeedTestSystem(
+            modelContainer: container,
             catalogEntries: [StockCatalogEntry(symbol: "AAPL", companyName: "Apple", descriptionText: "Description")],
             logging: LifecycleLogging(), echoFeedBuilder: builder
         )

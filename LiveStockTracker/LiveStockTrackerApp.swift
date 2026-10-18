@@ -5,6 +5,7 @@
 //  Created by Muhammad Ali Maniar on 17/10/2026.
 //
 
+import SwiftData
 import SwiftUI
 
 @main
@@ -20,8 +21,9 @@ struct LiveStockTrackerApp: App {
             switch bootstrap {
             case let .failed(message):
                 Text(message)
-            case let .ready(dependencies):
+            case let .ready(dependencies, container):
                 FeedPreviewView(dependencies: dependencies)
+                    .modelContainer(container)
             }
         }
     }
@@ -59,9 +61,15 @@ private struct FeedPreviewView: View {
             }
         }
         .task {
+            let cached = (try? await dependencies.repository.persistedQuotesSnapshot(limit: 30, cursor: nil))?.quotes ?? []
+            print("[cache] \(cached.count) saved quote(s): \(cached.prefix(3).map(\.symbol).joined(separator: ", ")) ...")
+            _ = await dependencies.repository.catalog()
+            quotes = dependencies.repository.currentMergedQuotes().sorted(by: .default)
+        }
+        .task {
             for await state in dependencies.feedStatus.connectionEvents() {
                 connectionState = state
-                print("[feed] connection \(state)")
+                print("[feed] connection \(state), saving degraded: \(dependencies.repository.isPersistenceDegraded)")
             }
         }
         .task {
