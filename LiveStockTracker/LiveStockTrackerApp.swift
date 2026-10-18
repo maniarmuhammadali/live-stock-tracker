@@ -16,7 +16,22 @@ struct LiveStockTrackerApp: App {
         entries = (try? CatalogLoading.load(bundle: .main, logger: logger)) ?? []
         print("[setup] catalog entries: \(entries.count)")
         print("[setup] feed URL: \(FeedTransportConfiguration.makeDefaultSocketURL()?.absoluteString ?? "missing")")
+        Self.logEveryOrdering(of: entries)
     }
+
+    private static func logEveryOrdering(of entries: [StockCatalogEntry]) {
+        let quotes = entries.enumerated().map { index, entry in
+            StockQuote(symbol: entry.symbol, price: Decimal(100 + index * 3), previousClose: Decimal(100 + index * 5 % 17),
+                       updatedAt: .now)
+        }
+        for field in SortField.allCases {
+            for direction in SortDirection.allCases {
+                let top = quotes.sorted(by: SortOption(field: field, direction: direction)).prefix(3).map(\.symbol)
+                print("[domain] \(field.rawValue) \(direction.rawValue): \(top.joined(separator: ", ")) ...")
+            }
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             NavigationStack {
