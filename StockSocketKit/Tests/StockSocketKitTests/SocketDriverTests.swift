@@ -13,12 +13,19 @@ actor ScriptedSocket: EchoSocketConnection {
     let continuation: AsyncThrowingStream<URLSessionWebSocketTask.Message, Error>.Continuation
     let openFails: Bool
     let sendFails: Bool
+    let pingBlocks: Bool
+    let sendBlocks: Bool
+    let blockedPing = WebSocketHandshakeAwaiter()
+    let blockedSend = WebSocketHandshakeAwaiter()
+    private(set) var pingCount = 0
     private(set) var firstCloseCode: URLSessionWebSocketTask.CloseCode?
 
-    init(openFails: Bool = false, sendFails: Bool = false) {
+    init(openFails: Bool = false, sendFails: Bool = false, pingBlocks: Bool = false, sendBlocks: Bool = false) {
         (stream, continuation) = AsyncThrowingStream.makeStream()
         self.openFails = openFails
         self.sendFails = sendFails
+        self.pingBlocks = pingBlocks
+        self.sendBlocks = sendBlocks
     }
 
     func open() throws {
@@ -32,11 +39,18 @@ actor ScriptedSocket: EchoSocketConnection {
     }
 
     func send(_ message: URLSessionWebSocketTask.Message) async throws {
+        if sendBlocks { try await blockedSend.waitHandshakeResult().get() }
         if sendFails { throw URLError(.networkConnectionLost) }
     }
 
+    func ping() async throws {
+        pingCount += 1
+        if pingBlocks { try await blockedPing.waitHandshakeResult().get() }
+    }
     func close(code: URLSessionWebSocketTask.CloseCode, reason: Data?) {
         if firstCloseCode == nil { firstCloseCode = code }
+        blockedPing.completeFailure(CancellationError())
+        blockedSend.completeFailure(CancellationError())
         continuation.finish()
     }
     func serverClose(_ code: Int) {
@@ -166,6 +180,35 @@ final class SocketDriverTests: XCTestCase {
         await session.stop()
     }
 
+    func testMissingPongReconnects() async {
+        await assertHealthRecovery(first: ScriptedSocket(pingBlocks: true))
+    }
+
+    func testBlockedSendReconnects() async {
+        await assertHealthRecovery(first: ScriptedSocket(sendBlocks: true))
+    }
+
+    private func assertHealthRecovery(first: ScriptedSocket) async {
+        let queue = SocketQueue([first, ScriptedSocket()])
+        let session = EchoWebSocketSession(
+            symbols: ["AAPL"],
+            backoffPolicy: ExponentialBackoffPolicy(initialNanoseconds: 1, multiplier: 2, maxNanoseconds: 10, jitter: .none),
+            healthPolicy: EchoHealthPolicy(heartbeatIntervalNanoseconds: 1_000_000,
+                                          pongTimeoutNanoseconds: 5_000_000, sendTimeoutNanoseconds: 5_000_000),
+            connectionBuilder: { await queue.next() }
+        )
+        let recovered = expectation(description: "Two connections opened after health failure")
+        recovered.expectedFulfillmentCount = 2
+        let stream = await session.wireEventsStream(bufferingPolicy: .unbounded)
+        let reader = Task {
+            for await event in stream where event == .connected { recovered.fulfill() }
+        }
+        await session.start()
+        await fulfillment(of: [recovered], timeout: 1)
+        await session.stop()
+        await reader.value
+    }
+
     func testNormalServerCloseIsSurfacedAndDoesNotAutomaticallyRetry() async {
         let socket = ScriptedSocket()
         let session = session([socket])
@@ -242,14 +285,16 @@ final class SocketDriverTests: XCTestCase {
         XCTAssertEqual(events, [.reconnectScheduled(attempt: 1), .disconnected(userInitiated: true)])
     }
 
-    func testMalformedPayloadIsTerminal() async {
+    func testRunOfMalformedPayloadsIsTerminal() async {
         let socket = ScriptedSocket()
         let session = session([socket])
         let failed = expectation(description: "Malformed data is terminal")
         let stream = await session.wireEventsStream(bufferingPolicy: .unbounded)
         let reader = Task {
             for await event in stream {
-                if event == .connected { await socket.deliver("not JSON") }
+                if event == .connected {
+                    for _ in 0..<EchoHealthPolicy().maxConsecutiveDecodeFailures { await socket.deliver("not JSON") }
+                }
                 if case .transportFailure(let failure) = event {
                     XCTAssertEqual(failure, .decodingFailed)
                     failed.fulfill()

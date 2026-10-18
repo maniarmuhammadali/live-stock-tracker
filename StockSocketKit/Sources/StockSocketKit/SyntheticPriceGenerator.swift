@@ -4,6 +4,7 @@
 //
 //  Created by Muhammad Ali Maniar on 18/10/2026.
 //
+
 import Foundation
 
 public struct SyntheticPriceGenerator: Sendable {
