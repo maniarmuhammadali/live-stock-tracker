@@ -6,4 +6,4 @@ Work in progress. Each feature branch adds one layer; the final README arrives w
 
 ## Build
 
-Open `StockTracker.xcodeproj` in Xcode and run the `StockTracker` scheme.
+Open `LiveStockTracker.xcodeproj` in Xcode and run the `LiveStockTracker` scheme.

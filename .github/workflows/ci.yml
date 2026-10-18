@@ -18,9 +18,11 @@ jobs:
         run: |
           command -v swiftlint >/dev/null || brew install swiftlint
           swiftlint lint --strict --config .swiftlint.yml
+      - name: App logic on macOS (same sources and tests as Xcode)
+        run: swift test
       - name: Build app and tests
         run: |
           xcodebuild build-for-testing \
-            -project StockTracker.xcodeproj \
-            -scheme StockTracker \
+            -project LiveStockTracker.xcodeproj \
+            -scheme LiveStockTracker \
             -destination "generic/platform=iOS Simulator"
