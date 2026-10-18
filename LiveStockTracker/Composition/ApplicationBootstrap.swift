@@ -7,11 +7,12 @@
 
 import Foundation
 import StockSocketKit
+import SwiftData
 
 enum ApplicationBootstrap {
     enum Phase {
         case failed(String)
-        case ready(AppDependencies)
+        case ready(AppDependencies, container: ModelContainer)
     }
 
     static func make(logger: Logging = OSLogStockLogger()) -> Phase {
@@ -26,7 +27,19 @@ enum ApplicationBootstrap {
             return .failed("catalog.json could not be loaded.")
         }
 
+        let schema = Schema([PersistedQuote.self])
+
+        let container: ModelContainer
+        do {
+            let configuration = ModelConfiguration(schema: schema)
+            container = try ModelContainer(for: schema, configurations: [configuration])
+        } catch {
+            logger.log(.error, "Model container bootstrap failed \(error.localizedDescription)")
+            return .failed("Saved prices could not be opened.")
+        }
+
         let repository = DefaultStockRepository(
+            modelContainer: container,
             catalogEntries: catalogEntries,
             logging: logger
         )
@@ -53,6 +66,6 @@ enum ApplicationBootstrap {
             handleNetworkPathChange: DefaultHandleNetworkPathChangeUseCase(session: coordinator, status: coordinator),
             networkObserver: FeedNetworkObserver(updates: NetworkPathMonitor.updates)
         )
-        return .ready(dependencies)
+        return .ready(dependencies, container: container)
     }
 }

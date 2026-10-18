@@ -6,6 +6,7 @@
 //
 
 import StockSocketKit
+import SwiftData
 import XCTest
 @testable import LiveStockTracker
 
@@ -14,7 +15,10 @@ final class BatchIngestionTests: XCTestCase {
     private let symbols = ["AAA", "BBB", "CCC"]
 
     private func makeRepository(feed: LifecycleFeed) throws -> FeedTestSystem {
-        FeedTestSystem(
+        let container = try ModelContainer(for: PersistedQuote.self,
+                                          configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        return FeedTestSystem(
+            modelContainer: container,
             catalogEntries: symbols.map { StockCatalogEntry(symbol: $0, companyName: $0, descriptionText: "D") },
             logging: LifecycleLogging(), echoFeedBuilder: { _ in feed }
         )
