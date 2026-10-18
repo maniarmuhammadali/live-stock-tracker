@@ -21,6 +21,6 @@ jobs:
       - name: Build app and tests
         run: |
           xcodebuild build-for-testing \
-            -project StockTracker.xcodeproj \
-            -scheme StockTracker \
+            -project LiveStockTracker.xcodeproj \
+            -scheme LiveStockTracker \
             -destination "generic/platform=iOS Simulator"
