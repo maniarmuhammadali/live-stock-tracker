@@ -6,10 +6,11 @@
 //
 
 import Foundation
+import StockSocketKit
 
 /// Centralizes transport tuning and the feed WebSocket endpoint (from Info.plist / xcconfig at build time).
 enum FeedTransportConfiguration {
-    /// Info.plist keys produced via `INFOPLIST_KEY_FeedWebSocket*` and `Config/*.xcconfig`.
+
     private nonisolated static let feedWebSocketSchemeKey = "FeedWebSocketScheme"
     private nonisolated static let feedWebSocketHostKey = "FeedWebSocketHostAndPath"
 

@@ -20,6 +20,8 @@ jobs:
           swiftlint lint --strict --config .swiftlint.yml
       - name: App logic on macOS (same sources and tests as Xcode)
         run: swift test
+      - name: Socket package
+        run: swift test --package-path StockSocketKit
       - name: Build app and tests
         run: |
           xcodebuild build-for-testing \

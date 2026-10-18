@@ -1,13 +1,16 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-// Host-side tests compile the same app logic and tests as Xcode. No copied implementation.
 let package = Package(
-    name: "LiveStockTrackerVerification",
+    name: "StockTrackerVerification",
     platforms: [.macOS(.v15), .iOS(.v18)],
+    dependencies: [
+        .package(path: "StockSocketKit"),
+    ],
     targets: [
         .target(
             name: "LiveStockTracker",
+            dependencies: ["StockSocketKit"],
             path: "LiveStockTracker",
             exclude: ["Assets.xcassets", "Config", "Resources", "LiveStockTrackerApp.swift"],
             sources: ["Domain", "Data", "Infrastructure", "Composition/FeedTransportConfiguration.swift"],
@@ -15,7 +18,7 @@ let package = Package(
         ),
         .testTarget(
             name: "LiveStockTrackerTests",
-            dependencies: ["LiveStockTracker"],
+            dependencies: ["LiveStockTracker", "StockSocketKit"],
             path: "LiveStockTrackerTests",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
