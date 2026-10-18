@@ -5,69 +5,77 @@
 //  Created by Muhammad Ali Maniar on 17/10/2026.
 //
 
-import StockSocketKit
 import SwiftUI
 
 @main
 struct LiveStockTrackerApp: App {
-    private let entries: [StockCatalogEntry]
+    private let bootstrap: ApplicationBootstrap.Phase
 
     init() {
-        let logger = OSLogStockLogger()
-        entries = (try? CatalogLoading.load(bundle: .main, logger: logger)) ?? []
-        print("[setup] catalog entries: \(entries.count)")
-        print("[setup] feed URL: \(FeedTransportConfiguration.makeDefaultSocketURL()?.absoluteString ?? "missing")")
-        Self.logEveryOrdering(of: entries)
-        Self.logEchoedSnapshots(symbols: entries.map(\.symbol), logger: logger)
-    }
-
-    private static func logEchoedSnapshots(symbols: [String], logger: Logging) {
-        guard let url = FeedTransportConfiguration.makeDefaultSocketURL() else { return }
-        let session = EchoWebSocketSession(
-            url: url, symbols: symbols, outboundIntervalNanoseconds: EchoTransportDefaults.outboundIntervalNanoseconds,
-            backoffPolicy: .standard, logger: LoggingEchoBridge(logging: logger)
-        )
-        Task {
-            let events = await session.wireEventsStream()
-            await session.start()
-            var snapshots = 0
-            for await event in events {
-                switch event {
-                case let .decodedBatch(batch):
-                    let sample = batch.prefix(3).map { "\($0.symbol) \(String(format: "%.2f", $0.price))" }
-                    print("[socket] snapshot of \(batch.count): \(sample.joined(separator: ", ")) ...")
-                    snapshots += 1
-                    if snapshots.isMultiple(of: 10) { print("[socket] diagnostics \(await session.diagnostics())") }
-                case let .reconnectScheduled(attempt):
-                    print("[socket] reconnect scheduled, attempt \(attempt)")
-                default:
-                    print("[socket] \(event)")
-                }
-            }
-        }
-    }
-
-    private static func logEveryOrdering(of entries: [StockCatalogEntry]) {
-        let quotes = entries.enumerated().map { index, entry in
-            StockQuote(symbol: entry.symbol, price: Decimal(100 + index * 3), previousClose: Decimal(100 + index * 5 % 17),
-                       updatedAt: .now)
-        }
-        for field in SortField.allCases {
-            for direction in SortDirection.allCases {
-                let top = quotes.sorted(by: SortOption(field: field, direction: direction)).prefix(3).map(\.symbol)
-                print("[domain] \(field.rawValue) \(direction.rawValue): \(top.joined(separator: ", ")) ...")
-            }
-        }
+        bootstrap = ApplicationBootstrap.make()
     }
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                List(entries) { entry in
-                    Text(entry.companyName)
-                }
-                .navigationTitle("Stocks")
+            switch bootstrap {
+            case let .failed(message):
+                Text(message)
+            case let .ready(dependencies):
+                FeedPreviewView(dependencies: dependencies)
             }
+        }
+    }
+}
+
+private struct FeedPreviewView: View {
+    let dependencies: AppDependencies
+
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var quotes: [StockQuote] = []
+    @State private var connectionState: FeedConnectionState = .idle
+
+    var body: some View {
+        NavigationStack {
+            List(quotes) { quote in
+                HStack {
+                    Text(quote.symbol)
+                    Spacer()
+                    Text(quote.price.formatted(.number.precision(.fractionLength(2))))
+                    Text(quote.dayChange >= 0 ? "▲" : "▼")
+                        .foregroundStyle(quote.dayChange >= 0 ? .green : .red)
+                }
+            }
+            .navigationTitle("Stocks")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Text(String(describing: connectionState)).font(.caption)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Start") { Task { await dependencies.startFeed.execute() } }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Stop") { Task { await dependencies.stopFeed.execute() } }
+                }
+            }
+        }
+        .task {
+            for await state in dependencies.feedStatus.connectionEvents() {
+                connectionState = state
+                print("[feed] connection \(state)")
+            }
+        }
+        .task {
+            for await batch in dependencies.repository.quoteBatches() {
+                quotes = dependencies.repository.currentMergedQuotes().sorted(by: .default)
+                let sample = batch.quotes.prefix(3).map { "\($0.symbol) \($0.price)" }
+                print("[feed] batch of \(batch.quotes.count): \(sample.joined(separator: ", ")) ...")
+            }
+        }
+        .task {
+            await dependencies.networkObserver.observeChanges(using: dependencies.handleNetworkPathChange)
+        }
+        .task(id: scenePhase) {
+            await dependencies.applySceneActivity.execute(scenePhase == .active ? .active : .inactive)
         }
     }
 }

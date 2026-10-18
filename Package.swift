@@ -12,8 +12,10 @@ let package = Package(
             name: "LiveStockTracker",
             dependencies: ["StockSocketKit"],
             path: "LiveStockTracker",
-            exclude: ["Assets.xcassets", "Config", "Resources", "LiveStockTrackerApp.swift"],
-            sources: ["Domain", "Data", "Infrastructure", "Composition/FeedTransportConfiguration.swift"],
+            exclude: ["Assets.xcassets", "Config", "Resources", "LiveStockTrackerApp.swift",
+                      "Composition/ApplicationBootstrap.swift"],
+            sources: ["Domain", "Data", "Infrastructure", "Composition/FeedTransportConfiguration.swift",
+                      "Presentation/ViewModels"],
             swiftSettings: [.defaultIsolation(MainActor.self), .swiftLanguageMode(.v6)]
         ),
         .testTarget(
