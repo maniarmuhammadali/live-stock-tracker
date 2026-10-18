@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1EB042B43085303E000DC27C /* StockSocketKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1EB042B33085303E000DC27C /* StockSocketKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		1EB77C812FA6ABAE00FF6087 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -55,6 +59,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EB042B43085303E000DC27C /* StockSocketKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -126,6 +131,7 @@
 			);
 			name = LiveStockTracker;
 			packageProductDependencies = (
+				1EB042B33085303E000DC27C /* StockSocketKit */,
 			);
 			productName = LiveStockTracker;
 			productReference = 1EB77C712FA6ABAB00FF6087 /* LiveStockTracker.app */;
@@ -210,6 +216,9 @@
 			);
 			mainGroup = 1EB77C682FA6ABAB00FF6087;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1EB042B23085303E000DC27C /* XCLocalSwiftPackageReference "StockSocketKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1EB77C722FA6ABAB00FF6087 /* Products */;
 			projectDirPath = "";
@@ -615,6 +624,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		1EB042B23085303E000DC27C /* XCLocalSwiftPackageReference "StockSocketKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = StockSocketKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1EB042B33085303E000DC27C /* StockSocketKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = StockSocketKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 1EB77C692FA6ABAB00FF6087 /* Project object */;
 }
