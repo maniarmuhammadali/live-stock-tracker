@@ -18,72 +18,19 @@ struct LiveStockTrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            switch bootstrap {
-            case let .failed(message):
-                Text(message)
-            case let .ready(dependencies, container):
-                FeedPreviewView(dependencies: dependencies)
-                    .modelContainer(container)
-            }
-        }
-    }
-}
+            Group {
+                switch bootstrap {
+                case let .failed(message):
+                    StockMessageView(
+                        presentation: message,
+                        palette: StockPalette.palette(for: .light)
+                    )
 
-private struct FeedPreviewView: View {
-    let dependencies: AppDependencies
-
-    @Environment(\.scenePhase) private var scenePhase
-    @State private var quotes: [StockQuote] = []
-    @State private var connectionState: FeedConnectionState = .idle
-
-    var body: some View {
-        NavigationStack {
-            List(quotes) { quote in
-                HStack {
-                    Text(quote.symbol)
-                    Spacer()
-                    Text(quote.price.formatted(.number.precision(.fractionLength(2))))
-                    Text(quote.dayChange >= 0 ? "▲" : "▼")
-                        .foregroundStyle(quote.dayChange >= 0 ? .green : .red)
+                case let .ready(dependencies, container):
+                    RootStockTrackerView(dependencies: dependencies)
+                        .modelContainer(container)
                 }
             }
-            .navigationTitle("Stocks")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Text(String(describing: connectionState)).font(.caption)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Start") { Task { await dependencies.startFeed.execute() } }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Stop") { Task { await dependencies.stopFeed.execute() } }
-                }
-            }
-        }
-        .task {
-            let cached = (try? await dependencies.repository.persistedQuotesSnapshot(limit: 30, cursor: nil))?.quotes ?? []
-            print("[cache] \(cached.count) saved quote(s): \(cached.prefix(3).map(\.symbol).joined(separator: ", ")) ...")
-            _ = await dependencies.repository.catalog()
-            quotes = dependencies.repository.currentMergedQuotes().sorted(by: .default)
-        }
-        .task {
-            for await state in dependencies.feedStatus.connectionEvents() {
-                connectionState = state
-                print("[feed] connection \(state), saving degraded: \(dependencies.repository.isPersistenceDegraded)")
-            }
-        }
-        .task {
-            for await batch in dependencies.repository.quoteBatches() {
-                quotes = dependencies.repository.currentMergedQuotes().sorted(by: .default)
-                let sample = batch.quotes.prefix(3).map { "\($0.symbol) \($0.price)" }
-                print("[feed] batch of \(batch.quotes.count): \(sample.joined(separator: ", ")) ...")
-            }
-        }
-        .task {
-            await dependencies.networkObserver.observeChanges(using: dependencies.handleNetworkPathChange)
-        }
-        .task(id: scenePhase) {
-            await dependencies.applySceneActivity.execute(scenePhase == .active ? .active : .inactive)
         }
     }
 }
