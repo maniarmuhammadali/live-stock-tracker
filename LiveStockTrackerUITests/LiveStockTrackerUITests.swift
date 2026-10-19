@@ -24,7 +24,7 @@ final class LiveStockTrackerUITests: XCTestCase {
     @MainActor
     func testStartStopSortAndNavigateToDetail() {
         let app = launch()
-        XCTAssertTrue(app.navigationBars["Stocks App"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.navigationBars["Pulse Pro"].waitForExistence(timeout: 8))
         let toggle = app.buttons["toolbar.feed_toggle"]
         _ = firstRowIdentifier(app)
         XCTAssertEqual(toggle.label, "Stop streaming stock prices", "The feed starts on launch")

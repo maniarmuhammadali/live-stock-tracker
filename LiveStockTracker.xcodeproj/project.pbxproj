@@ -431,6 +431,7 @@
 				DEVELOPMENT_TEAM = KSRBYPBTHK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Pulse Pro";
 				INFOPLIST_KEY_FeedWebSocketHostAndPath = "$(FEED_WEBSOCKET_HOST_AND_PATH)";
 				INFOPLIST_KEY_FeedWebSocketScheme = "$(FEED_WEBSOCKET_SCHEME)";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -469,6 +470,7 @@
 				DEVELOPMENT_TEAM = KSRBYPBTHK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Pulse Pro";
 				INFOPLIST_KEY_FeedWebSocketHostAndPath = "$(FEED_WEBSOCKET_HOST_AND_PATH)";
 				INFOPLIST_KEY_FeedWebSocketScheme = "$(FEED_WEBSOCKET_SCHEME)";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
