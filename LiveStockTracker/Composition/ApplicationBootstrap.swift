@@ -11,31 +11,31 @@ import SwiftData
 
 enum ApplicationBootstrap {
     enum Phase {
-        case failed(String)
+        case failed(MessagePresentation)
         case ready(AppDependencies, container: ModelContainer)
     }
 
-    static func make(logger: Logging = OSLogStockLogger()) -> Phase {
+    static func make(logger: Logging = OSLogStockLogger(), environment: AppEnvironment = .forCurrentLaunch()) -> Phase {
         guard let socketURL = FeedTransportConfiguration.makeDefaultSocketURL() else {
-            return .failed("The feed URL is missing.")
+            return .failed(MessagePresentation.feedTransportFailure)
         }
 
         let catalogEntries: [StockCatalogEntry]
         do {
-            catalogEntries = try CatalogLoading.load(bundle: .main, logger: logger)
+            catalogEntries = environment.transformCatalog(try CatalogLoading.load(bundle: .main, logger: logger))
         } catch {
-            return .failed("catalog.json could not be loaded.")
+            return .failed(MessagePresentation.catalogFailure)
         }
 
         let schema = Schema([PersistedQuote.self])
 
         let container: ModelContainer
         do {
-            let configuration = ModelConfiguration(schema: schema)
+            let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: environment.storesInMemory)
             container = try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             logger.log(.error, "Model container bootstrap failed \(error.localizedDescription)")
-            return .failed("Saved prices could not be opened.")
+            return .failed(MessagePresentation.persistenceFailure)
         }
 
         let repository = DefaultStockRepository(
@@ -45,13 +45,18 @@ enum ApplicationBootstrap {
         )
         let coordinator = FeedSessionCoordinator(repository: repository,
             feedBuilder: { symbols in
-                let transport = EchoWebSocketSession(
-                    url: socketURL,
-                    symbols: symbols,
-                    outboundIntervalNanoseconds: EchoTransportDefaults.outboundIntervalNanoseconds,
-                    backoffPolicy: .standard,
-                    logger: LoggingEchoBridge(logging: logger)
-                )
+                let transport: any StockEchoFeed
+                if let override = environment.feedOverride {
+                    transport = override(symbols)
+                } else {
+                    transport = EchoWebSocketSession(
+                        url: socketURL,
+                        symbols: symbols,
+                        outboundIntervalNanoseconds: EchoTransportDefaults.outboundIntervalNanoseconds,
+                        backoffPolicy: .standard,
+                        logger: LoggingEchoBridge(logging: logger)
+                    )
+                }
                 return EchoPriceFeed(transport: transport, logging: logger)
             }
         )

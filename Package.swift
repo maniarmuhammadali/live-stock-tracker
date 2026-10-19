@@ -12,10 +12,14 @@ let package = Package(
             name: "LiveStockTracker",
             dependencies: ["StockSocketKit"],
             path: "LiveStockTracker",
-            exclude: ["Assets.xcassets", "Config", "Resources", "LiveStockTrackerApp.swift",
-                      "Composition/ApplicationBootstrap.swift"],
+            exclude: ["Assets.xcassets", "Config", "Resources", "Localizable.xcstrings", "LiveStockTrackerApp.swift",
+                      "Presentation/Views", "Presentation/Support/StockNavigationRoute.swift",
+                      "Presentation/Support/SortOption+Presentation.swift", "Presentation/Support/StockPalette.swift",
+                      "Presentation/Support/StockPaletteEnvironment.swift", "Composition/ApplicationBootstrap.swift"],
             sources: ["Domain", "Data", "Infrastructure", "Composition/FeedTransportConfiguration.swift",
-                      "Presentation/ViewModels"],
+                      "Presentation/ViewModels", "Presentation/Support/CurrencyFormatting.swift",
+                      "Presentation/Support/StockUIModels.swift", "Presentation/Support/MessagePresentation.swift",
+                      "Presentation/Support/MessagePresentationMapper.swift"],
             swiftSettings: [.defaultIsolation(MainActor.self), .swiftLanguageMode(.v6)]
         ),
         .testTarget(
