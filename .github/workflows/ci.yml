@@ -8,23 +8,62 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  host:
     runs-on: macos-26
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          mkdir -p TestResults
+          xcodebuild -version | tee TestResults/toolchain.log
+          swift --version | tee -a TestResults/toolchain.log
       - name: SwiftLint
         run: |
+          set -euo pipefail
           command -v swiftlint >/dev/null || brew install swiftlint
-          swiftlint lint --strict --config .swiftlint.yml
+          swiftlint lint --strict --config .swiftlint.yml 2>&1 | tee TestResults/swiftlint.log
       - name: App logic on macOS (same sources and tests as Xcode)
-        run: swift test
+        run: |
+          set -euo pipefail
+          swift test 2>&1 | tee TestResults/app-logic.log
       - name: Socket package
-        run: swift test --package-path StockSocketKit
+        run: |
+          set -euo pipefail
+          swift test --package-path StockSocketKit 2>&1 | tee TestResults/socket.log
+      - name: Upload host logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: host-results
+          path: TestResults
+          if-no-files-found: warn
+
+  ios:
+    # Builds the app and its test bundles only; UI tests run locally in Xcode.
+    # May break when the macos-26 runner image updates its Xcode or iOS SDK.
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
       - name: Build app and tests
         run: |
+          set -euo pipefail
+          mkdir -p TestResults
           xcodebuild build-for-testing \
             -project LiveStockTracker.xcodeproj \
             -scheme LiveStockTracker \
-            -destination "generic/platform=iOS Simulator"
+            -destination "generic/platform=iOS Simulator" \
+            2>&1 | tee TestResults/xcodebuild.log
+      - name: Upload iOS build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: TestResults
+          if-no-files-found: warn

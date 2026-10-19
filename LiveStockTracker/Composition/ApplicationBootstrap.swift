@@ -20,6 +20,8 @@ enum ApplicationBootstrap {
             return .failed(MessagePresentation.feedTransportFailure)
         }
 
+        let tuning = FeedTransportTuning.load(bundle: .main)
+
         let catalogEntries: [StockCatalogEntry]
         do {
             catalogEntries = environment.transformCatalog(try CatalogLoading.load(bundle: .main, logger: logger))
@@ -52,9 +54,11 @@ enum ApplicationBootstrap {
                     transport = EchoWebSocketSession(
                         url: socketURL,
                         symbols: symbols,
-                        outboundIntervalNanoseconds: EchoTransportDefaults.outboundIntervalNanoseconds,
-                        backoffPolicy: .standard,
-                        logger: LoggingEchoBridge(logging: logger)
+                        outboundIntervalNanoseconds: tuning.outboundIntervalNanoseconds,
+                        backoffPolicy: tuning.backoffPolicy,
+                        logger: LoggingEchoBridge(logging: logger),
+                        handshakeTimeoutNanoseconds: tuning.handshakeTimeoutNanoseconds,
+                        healthPolicy: tuning.healthPolicy
                     )
                 }
                 return EchoPriceFeed(transport: transport, logging: logger)
