@@ -103,13 +103,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "تطبيق الأسهم"
+            "value" : "Pulse Pro"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stocks App"
+            "value" : "Pulse Pro"
           }
         }
       }
@@ -551,13 +551,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "اضغط على زر التشغيل للاتصال وبث تحديثات الأسعار التجريبية."
+            "value" : "جارٍ الاتصال ببث الأسعار المباشر."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap play to connect and stream echoed price updates."
+            "value" : "Connecting to the live feed."
           }
         }
       }
@@ -567,13 +567,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ابدأ البث المباشر"
+            "value" : "جارٍ الاتصال…"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Start the live feed"
+            "value" : "Connecting…"
           }
         }
       }

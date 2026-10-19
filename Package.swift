@@ -17,6 +17,7 @@ let package = Package(
                       "Presentation/Support/SortOption+Presentation.swift", "Presentation/Support/StockPalette.swift",
                       "Presentation/Support/StockPaletteEnvironment.swift", "Composition/ApplicationBootstrap.swift"],
             sources: ["Domain", "Data", "Infrastructure", "Composition/FeedTransportConfiguration.swift",
+                      "Composition/FeedTransportTuning.swift",
                       "Presentation/ViewModels", "Presentation/Support/CurrencyFormatting.swift",
                       "Presentation/Support/StockUIModels.swift", "Presentation/Support/MessagePresentation.swift",
                       "Presentation/Support/MessagePresentationMapper.swift"],

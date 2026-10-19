@@ -14,21 +14,76 @@ struct StockSymbolAvatarView: View {
     let palette: StockPalette
 
     var body: some View {
+        Group {
+            if let url = StockSymbolAvatar.logoURL(forSymbol: symbol) {
+                AsyncImage(url: url) { phase in
+                    if case let .success(image) = phase {
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .padding(diameter * 0.16)
+                            .frame(width: diameter, height: diameter)
+                            .background(Color.white)
+                    } else {
+                        initials
+                    }
+                }
+            } else {
+                initials
+            }
+        }
+        .frame(width: diameter, height: diameter)
+        .background(StockSymbolAvatar.accentFill(forSymbol: symbol))
+        .clipShape(Circle())
+        .accessibilityHidden(true)
+    }
+
+    private var initials: some View {
         Text(StockSymbolAvatar.initialLetters(symbol: symbol, companyName: companyName))
             .font(.system(size: diameter * 0.42, weight: .semibold, design: .rounded))
             .foregroundStyle(Color.white.opacity(0.92))
-            .frame(width: diameter, height: diameter)
-            .background(StockSymbolAvatar.accentFill(forSymbol: symbol))
-            .clipShape(Circle())
-            .overlay(
-                Circle()
-                    .strokeBorder(palette.secondaryText.opacity(0.22), lineWidth: 1)
-            )
-            .accessibilityHidden(true)
     }
 }
 
 private enum StockSymbolAvatar {
+    private static let companyDomains: [String: String] = [
+        "AAPL": "apple.com",
+        "GOOG": "google.com",
+        "TSLA": "tesla.com",
+        "AMZN": "amazon.com",
+        "MSFT": "microsoft.com",
+        "NVDA": "nvidia.com",
+        "META": "meta.com",
+        "NFLX": "netflix.com",
+        "CRM": "salesforce.com",
+        "ORCL": "oracle.com",
+        "ADBE": "adobe.com",
+        "SPOT": "spotify.com",
+        "AMD": "amd.com",
+        "INTC": "intel.com",
+        "IBM": "ibm.com",
+        "SAP": "sap.com",
+        "NOW": "servicenow.com",
+        "SNOW": "snowflake.com",
+        "PYPL": "paypal.com",
+        "SHOP": "shopify.com",
+        "MU": "micron.com",
+        "QCOM": "qualcomm.com",
+        "BAC": "bankofamerica.com",
+        "DIS": "disney.com",
+        "KO": "coca-cola.com"
+    ]
+
+    static func logoURL(forSymbol symbol: String) -> URL? {
+        guard let domain = companyDomains[symbol.uppercased()] else { return nil }
+        var components = URLComponents(string: "https://www.google.com/s2/favicons")
+        components?.queryItems = [
+            URLQueryItem(name: "sz", value: "128"),
+            URLQueryItem(name: "domain", value: domain)
+        ]
+        return components?.url
+    }
+
     static func initialLetters(symbol: String, companyName: String) -> String {
         func firstSignificantLetter(in word: String) -> Character? {
             word.first { $0.isLetter || $0.isNumber }

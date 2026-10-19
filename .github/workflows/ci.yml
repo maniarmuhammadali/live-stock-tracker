@@ -8,23 +8,67 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
-    runs-on: macos-26
+  host:
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
       - name: SwiftLint
         run: |
           command -v swiftlint >/dev/null || brew install swiftlint
           swiftlint lint --strict --config .swiftlint.yml
       - name: App logic on macOS (same sources and tests as Xcode)
-        run: swift test
+        run: swift test --enable-code-coverage
+      - name: App logic coverage report
+        run: |
+          BIN=$(swift build --show-bin-path)
+          XCTEST=$(find "$BIN" -maxdepth 1 -name '*.xctest' | head -1)
+          xcrun llvm-cov report "$XCTEST/Contents/MacOS/$(basename "$XCTEST" .xctest)" \
+            -instr-profile "$BIN/codecov/default.profdata" \
+            -ignore-filename-regex '(\.build|Tests|StockSocketKit)/'
       - name: Socket package
         run: swift test --package-path StockSocketKit
+      - name: Thread Sanitizer
+        run: |
+          swift test --sanitize=thread
+          swift test --sanitize=thread --package-path StockSocketKit
+
+  ios:
+    # Builds only; UI tests run locally in Xcode.
+    # Match the Xcode 27 requirement used for local builds.
+    runs-on: xcode-27
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
       - name: Build app and tests
         run: |
           xcodebuild build-for-testing \
             -project LiveStockTracker.xcodeproj \
             -scheme LiveStockTracker \
             -destination "generic/platform=iOS Simulator"
+      - name: Release build excludes the UI-testing environment
+        run: |
+          xcodebuild build \
+            -project LiveStockTracker.xcodeproj \
+            -scheme LiveStockTracker \
+            -configuration Release \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath build/release
+          APP=build/release/Build/Products/Release-iphonesimulator/LiveStockTracker.app/LiveStockTracker
+          if strings "$APP" | grep -q -e '--ui-testing' -e 'DeterministicFeed'; then
+            echo "::error::Release binary contains UI-testing code"
+            exit 1
+          fi
